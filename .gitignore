@@ -1,0 +1,4 @@
+seen_slots.json
+__pycache__/
+*.py[cod]
+frontdesk_watch.py.bak-*

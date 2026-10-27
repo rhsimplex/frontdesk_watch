@@ -32,9 +32,10 @@ def telegram_send(message: str) -> None:
         "disable_web_page_preview": True,
     }
     try:
-        requests.post(url, json=payload, timeout=10)
-    except Exception:
-        pass
+        r = requests.post(url, json=payload, timeout=10)
+        print("DEBUG telegram response:", r.text)
+    except Exception as e:
+        print("DEBUG telegram error:", e)
 
 def slots_fingerprint(slots: List[datetime]) -> str:
     """
@@ -60,7 +61,7 @@ class Config:
     # cutoff_year: int = 2026
     # cutoff_month: int = 6
     # cutoff_day: int = 1  # before June 1
-    cutoff_days_ahead: int = 105
+    cutoff_days_ahead: int = 90
 
 
     seen_file: str = "seen_slots.json"
@@ -92,14 +93,14 @@ def save_seen(path: str, seen: Set[str]) -> None:
 def parse_times_from_html(html: str) -> List[datetime]:
     """
     Parse the TimeSelection page:
-      - day container: div.date.one-queue
+      - day container: .date.one-queue
       - date label: span.header-text
       - available times: span.available-time
     """
     soup = BeautifulSoup(html, "lxml")
     out: List[datetime] = []
 
-    for day_div in soup.select("div.date.one-queue"):
+    for day_div in soup.select(".date.one-queue"):
         header = day_div.select_one("span.header-text")
         if not header:
             continue
@@ -148,7 +149,7 @@ async def get_available_slots(cfg: Config) -> List[datetime]:
 
         # Wait for TimeSelection content
         try:
-            await page.wait_for_selector("div.date.one-queue", timeout=20000)
+            await page.wait_for_selector(".date.one-queue", timeout=20000)
         except PlaywrightTimeoutError:
             # If this fails, dump the current HTML anyway for debugging.
             html = await page.content()
@@ -211,6 +212,14 @@ async def main_async():
             should_notify_change = bool(good) and (fp != last_fingerprint)
             should_notify_reminder = bool(good) and (fp == last_fingerprint) and (
                 (now_ts - last_telegram_sent_at) >= cfg.telegram_min_interval_seconds
+            )
+            should_notify_reminder = False
+            print(
+                "DEBUG notify:",
+                "good=", bool(good),
+                "change=", should_notify_change,
+                "reminder=", should_notify_reminder,
+                "fp_changed=", fp != last_fingerprint
             )
 
             if should_notify_change or should_notify_reminder:

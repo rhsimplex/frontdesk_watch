@@ -139,11 +139,10 @@ async def get_available_slots(cfg: Config) -> List[datetime]:
 
         await page.goto(cfg.home_url, wait_until="domcontentloaded", timeout=30000)
 
-        # Click the link codegen found.
-        # Use regex "starts with" match to avoid trailing ellipsis differences.
-        link = page.get_by_role(
-            "link",
-            name=re.compile(rf"^{re.escape(cfg.go_to_time_selection_link_prefix)}", re.I),
+        # Follow the original Wedding Room route independently of link wording.
+        link = page.locator(
+            'a[href*="/ReserveTime/StartReservation"]'
+            '[href*="buttonId=a93057c4-19bc-4478-aeec-cee9f35a86c9"]'
         )
         await link.first.click(timeout=15000)
 
